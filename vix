@@ -1,0 +1,47 @@
+#!/bin/bash
+# vix — часть проекта Vixalt
+# Без аргументов: показать иконку
+# С аргументами:  поиск на YouTube
+
+# Ищем иконку: сначала рядом со скриптом, потом в системной папке
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+
+if [ -f "$SCRIPT_DIR/icons/meicon.png" ]; then
+    IMG="$SCRIPT_DIR/icons/meicon.png"
+elif [ -f "/usr/share/vixalt/icons/meicon.png" ]; then
+    IMG="/usr/share/vixalt/icons/meicon.png"
+else
+    IMG=""
+fi
+
+# ---------- Режим 1: поиск на YouTube ----------
+if [ $# -gt 0 ]; then
+    query="$*"
+    encoded=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))" "$query")
+    xdg-open "https://www.youtube.com/results?search_query=$encoded"
+    exit 0
+fi
+
+# ---------- Режим 2: показать картинку ----------
+if [ -z "$IMG" ] || [ ! -f "$IMG" ]; then
+    echo "Иконка не найдена (icons/meicon.png)" >&2
+    exit 1
+fi
+
+# Kitty
+if [ -n "$KITTY_WINDOW_ID" ] || [ "$TERM" = "xterm-kitty" ]; then
+    command -v kitten >/dev/null && { kitten icat "$IMG"; exit 0; }
+fi
+
+# iTerm2 / WezTerm
+if [ "$TERM_PROGRAM" = "iTerm.app" ] || [ "$TERM_PROGRAM" = "WezTerm" ]; then
+    command -v imgcat >/dev/null && { imgcat "$IMG"; exit 0; }
+fi
+
+# Универсальные
+command -v chafa     >/dev/null && { chafa "$IMG";        exit 0; }
+command -v img2sixel >/dev/null && { img2sixel "$IMG";    exit 0; }
+command -v jp2a      >/dev/null && { jp2a --colors "$IMG"; exit 0; }
+
+echo "Не найден инструмент для показа картинки. Установи: sudo pacman -S chafa" >&2
+exit 1
